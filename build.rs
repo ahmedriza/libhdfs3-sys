@@ -3,19 +3,16 @@ use std::path::PathBuf;
 
 fn main() {
     let vec_flags = vec![];
-    // build_hdfs3_lib(&vec_flags);
+    build_hdfs3_lib(&vec_flags);
     build_hdfs3_ffi(&vec_flags);
 }
 
 // This is the FFI builder for the Apache Hawq hdfs3 C++ library with its C bindings
 fn build_hdfs3_ffi(_flags: &[String]) {
-    // Tell cargo to tell rustc to link to libhdfspp
+    // Tell cargo to tell rustc to link to libhdfs3 dynamically
     // See also: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
-    // println!("cargo:rust-link-search=/opt/libhdfs3/lib");
+    // println!("cargo:rustc-link-search=/opt/libhdfs3/lib");
     // println!("cargo:rustc-link-lib=hdfs3");
-    // println!("cargo:rustc-link-lib=static=hdfs3");
-    println!("cargo:rustc-link-search=/opt/libhdfs3/lib");
-    println!("cargo:rustc-link-lib=hdfs3");
     
     // Tell cargo to invalidate the built crate whenever the wrapper changes.
     println!("cargo:rerun-if-changed=wrapper.h");
@@ -52,9 +49,15 @@ fn build_hdfs3_lib(_flags: &[String]) {
     let dst = cmake::build("libhdfs3");
     // Tell cargo to tell rustc to link to libhdfspp
     // See also: https://doc.rust-lang.org/cargo/reference/build-scripts.html#-sys-packages
-    println!("cargo:rust-link-search=native={}/lib", dst.display());
-    // println!("cargo:rustc-link-lib=hdfs3");
+    println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=hdfs3");
+    // The following are required when linking statically with libhdfs3
+    println!("cargo:rustc-link-lib=dylib=stdc++");
+    println!("cargo:rustc-link-lib=dylib=protobuf");
+    println!("cargo:rustc-link-lib=dylib=gsasl");
+    println!("cargo:rustc-link-lib=dylib=uuid");
+    println!("cargo:rustc-link-lib=dylib=xml2");
+    println!("cargo:rustc-link-lib=dylib=krb5");
 }
 
 fn get_hdfs3_file_path(filename: &'static str) -> String {
