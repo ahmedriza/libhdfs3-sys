@@ -1,11 +1,13 @@
 use libhdfs3_sys::hdfs3::HdfsFs;
 
-// Needs a local HDFS to be up and running.
-// This is fairly easy to do after downloading a recent hadoop
-// binary distribution and configuring it to run locally. For example:
-//
-// `$HADOOP_HOME/sbin/start-dfs.sh`
-//
+/// An integration test of the API.
+///
+/// Needs a local HDFS to be up and running.
+/// This is fairly easy to do after downloading a recent hadoop
+/// binary distribution and configuring it to run locally. For example:
+///
+/// `$HADOOP_HOME/sbin/start-dfs.sh`
+///
 #[test]
 fn test_all() -> anyhow::Result<()> {
     let fs = HdfsFs::new("hdfs://localhost:8020")?;
