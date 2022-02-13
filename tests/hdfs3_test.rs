@@ -37,8 +37,7 @@ fn test_all() -> anyhow::Result<()> {
     }
 
     // (5) Delete the file
-    let _r = fs.delete(&path, false)?;
-    assert!(_r);
+    assert!(fs.delete(&path, false)?);
 
     // (5) Verify the file does not exist
     assert!(!fs.exist(&path));
