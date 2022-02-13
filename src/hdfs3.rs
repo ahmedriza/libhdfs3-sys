@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use std::default;
 use std::ffi::CStr;
 use std::fmt::Formatter;
 use std::rc::Rc;
 
 use lazy_static::lazy_static;
-use libc::{c_int, c_void};
+use libc::{c_int, c_short, c_void};
 use log::*;
 use std::sync::RwLock;
 use std::{ffi::CString, marker::PhantomData};
@@ -77,6 +76,56 @@ impl HdfsFs {
         });
 
         Ok(hdfsFs.clone())
+    }
+
+    /// Open a file for append
+    pub fn append(&self, path: &str) -> Result<HdfsFile, HdfsErr> {
+        if !self.exist(path) {
+            return Err(HdfsErr::FileNotFound(path.to_owned()));
+        }
+        let file = unsafe {
+            let cstr_path = CString::new(path).unwrap();
+            hdfsOpenFile(self.raw, cstr_path.as_ptr(), O_APPEND, 0, 0, 0)
+        };
+        self.new_hdfs_file(path, file)
+    }
+
+    /// Create the given path as read-only
+    #[inline]
+    pub fn create(self, path: &str) -> Result<HdfsFile, HdfsErr> {
+        self.create_with_params(path, false, 0, 0, 0)
+    }
+
+    /// Create the given path as writable
+    #[inline]
+    pub fn create_with_overwrite(self, path: &str, overwrite: bool) -> Result<HdfsFile, HdfsErr> {
+        self.create_with_params(path, overwrite, 0, 0, 0)
+    }
+
+    /// Create the given path
+    pub fn create_with_params(
+        &self,
+        path: &str,
+        overwrite: bool,
+        buf_size: i32,
+        replica_num: i16,
+        block_size: i64,
+    ) -> Result<HdfsFile, HdfsErr> {
+        if !overwrite && self.exist(path) {
+            return Err(HdfsErr::FileAlreadyExists(path.to_owned()));
+        }
+        let file = unsafe {
+            let cstr_path = CString::new(path).unwrap();
+            hdfsOpenFile(
+                self.raw,
+                cstr_path.as_ptr(),
+                O_WRONLY,
+                buf_size as c_int,
+                replica_num as c_short,
+                block_size as tOffset,
+            )
+        };
+        self.new_hdfs_file(path, file)
     }
 
     pub fn get_file_status(&self, path: &str) -> Result<FileStatus, HdfsErr> {
@@ -184,18 +233,11 @@ impl HdfsFs {
     pub fn open_for_writing(&self, path: &str) -> Result<HdfsFile, HdfsErr> {
         let file = unsafe {
             let cstr_path = CString::new(path).unwrap();
-            hdfsOpenFile(
-                self.raw,
-                cstr_path.as_ptr(),
-                O_WRONLY,
-		0,
-                0,
-                0,
-            )
+            hdfsOpenFile(self.raw, cstr_path.as_ptr(), O_WRONLY, 0, 0, 0)
         };
         self.new_hdfs_file(path, file)
     }
-    
+
     fn new_hdfs_file(&self, path: &str, file: hdfsFile) -> Result<HdfsFile, HdfsErr> {
         if file.is_null() {
             Err(HdfsErr::Miscellaneous(format!(
@@ -409,7 +451,7 @@ impl HdfsFile {
                 self.path
             )))
         } else {
-            Ok(ret)	    
+            Ok(ret)
         }
     }
 
