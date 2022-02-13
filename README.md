@@ -1,6 +1,6 @@
 # libhdfs3-sys
 
-A Rust binding to the hdfs3 library from the Apache hawq project: https://github.com/ahmedriza/hawq/tree/master/depends/libhdfs3
+A Rust binding to the hdfs3 library from the Apache hawq project: https://github.com/apache/hawq/tree/master/depends/libhdfs3
 
 The advantage of using libhdfs3 is that it does not use JNI and hence there's no need to have the Hadoop jars around
 or the JVM system libraries in order to use HDFS.
