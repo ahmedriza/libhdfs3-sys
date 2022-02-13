@@ -2,7 +2,7 @@ use libhdfs3_sys::hdfs3::HdfsFs;
 
 #[test]
 fn test_all() -> anyhow::Result<()> {
-    let fs = HdfsFs::new("hdfs://tr.onedigit.org:8020")?;
+    let fs = HdfsFs::new("hdfs://tr:8020")?;
 
     let parent_path = "/user/ahmed/test";
     let path = format!("{}/Cargo.toml", parent_path);

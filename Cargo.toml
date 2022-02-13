@@ -3,7 +3,7 @@ name = "libhdfs3-sys"
 version = "0.1.0"
 links = "hdfs3"
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 lazy_static = "^1.4"
@@ -14,10 +14,7 @@ url = "^2.2"
 
 [build-dependencies]
 bindgen = "0.59"
-cc = { version = "1.0", features = ["parallel"] }
-pkg-config = "0.3"
 cmake = "0.1"
-
 
 [dev-dependencies]
 anyhow = "^1.0"
