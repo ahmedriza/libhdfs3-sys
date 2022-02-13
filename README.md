@@ -7,6 +7,9 @@ with recent version of dependent libraries.
 
 The Rust binding is inspired by https://github.com/yahoNanJing/fs-hdfs
 
+The advantage of using libhdfs3 is that it does not use JNI and hence there's no need to have the Hadoop jars around
+or the JVM system libraries in order to use HDFS.
+
 # Requirements
 
 The main requirements are the dependencies needed by libhdfs3.
