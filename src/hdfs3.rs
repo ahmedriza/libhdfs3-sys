@@ -50,6 +50,21 @@ impl HdfsFs {
     /// * namenode_url - namenode url, e.g. hdfs://foo:8020. If the port is not specified, then
     ///                  the default port of 8020 will be used to connect to the Namenode.
     pub fn new(namenode_url: &str) -> Result<HdfsFs, HdfsErr> {
+        HdfsFs::new_with_hdfs_params(namenode_url, HashMap::new())
+    }
+    
+    /// Create an instance of HdfsFs. A global cache is used to ensure that only one instance
+    /// is created per namenode uri.
+    ///
+    /// * namenode_url - namenode url, e.g. hdfs://foo:8020. If the port is not specified, then
+    ///                  the default port of 8020 will be used to connect to the Namenode.
+    /// * hdfs_params - optional key value pairs that need to be passed to configure
+    ///   the HDFS client side.
+    ///   Example: key = 'dfs.domain.socket.path', value = '/var/lib/hadoop-fs/dn_socket'
+    pub fn new_with_hdfs_params(
+        namenode_url: &str,
+        hdfs_params: HashMap<String, String>,
+    ) -> Result<HdfsFs, HdfsErr> {
         let namenode_address = get_namenode_uri(namenode_url)?;
 
         // Try to get from cache if an entry exists.
@@ -66,8 +81,8 @@ impl HdfsFs {
             .write()
             .expect("Could not aquire write lock on HDFS cache");
         let hdfsFs = cache.entry(namenode_address.clone()).or_insert_with(|| {
-            let hdfs_fs =
-                create_hdfs_fs(namenode_address.clone()).expect("Could not create HDFS connection");
+            let hdfs_fs = create_hdfs_fs(namenode_address.clone(), hdfs_params)
+                .expect("Could not create HDFS connection");
             HdfsFs {
                 namenode_address,
                 raw: hdfs_fs,
@@ -521,11 +536,24 @@ pub struct NameNodeAddress {
     port: u16,
 }
 
-fn create_hdfs_fs(namenode_address: NameNodeAddress) -> Result<hdfsFS, HdfsErr> {
+/// Create an instance of hdfsFs.
+///
+/// * namenode_address - Namenode URL
+/// * hdfs_params - optional key value pairs that need to be passed to configure
+///   the HDFS client side
+fn create_hdfs_fs(
+    namenode_address: NameNodeAddress,
+    hdfs_params: HashMap<String, String>,
+) -> Result<hdfsFS, HdfsErr> {
     let hdfs_fs = unsafe {
         let hdfs_builder = hdfsNewBuilder();
 
         let cstr_host = CString::new(namenode_address.host.as_bytes()).unwrap();
+        for (k, v) in hdfs_params {
+            let cstr_k = CString::new(k).unwrap();
+            let cstr_v = CString::new(v).unwrap();
+            hdfsBuilderConfSetStr(hdfs_builder, cstr_k.as_ptr(), cstr_v.as_ptr());
+        }
         hdfsBuilderSetNameNode(hdfs_builder, cstr_host.as_ptr());
         hdfsBuilderSetNameNodePort(hdfs_builder, namenode_address.port);
 
