@@ -92,13 +92,13 @@ impl HdfsFs {
 
     /// Create the given path as read-only
     #[inline]
-    pub fn create(self, path: &str) -> Result<HdfsFile, HdfsErr> {
+    pub fn create(&self, path: &str) -> Result<HdfsFile, HdfsErr> {
         self.create_with_params(path, false, 0, 0, 0)
     }
 
     /// Create the given path as writable
     #[inline]
-    pub fn create_with_overwrite(self, path: &str, overwrite: bool) -> Result<HdfsFile, HdfsErr> {
+    pub fn create_with_overwrite(&self, path: &str, overwrite: bool) -> Result<HdfsFile, HdfsErr> {
         self.create_with_params(path, overwrite, 0, 0, 0)
     }
 
