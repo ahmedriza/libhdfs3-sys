@@ -1,32 +1,42 @@
 use libhdfs3_sys::hdfs3::HdfsFs;
 
+// Needs a local HDFS to be up and running.
+// This is fairly easy to do after downloading a recent hadoop
+// binary distribution and configuring it to run locally. For example:
+//
+// `$HADOOP_HOME/sbin/start-dfs.sh`
+//
 #[test]
 fn test_all() -> anyhow::Result<()> {
-    let fs = HdfsFs::new("hdfs://tr:8020")?;
+    let fs = HdfsFs::new("hdfs://localhost:8020")?;
 
-    let parent_path = "/user/ahmed/test";
+    let parent_path = "/test";
     let path = format!("{}/Cargo.toml", parent_path);
 
-    // (1) write a file 
+    // (1) Create parent directory
+    fs.mkdir(parent_path)?;
+    assert!(fs.exist(parent_path));
+
+    // (2) write a file 
     let hdfs_file_to_write = fs.open_for_writing(&path)?;
     assert!(fs.exist(&path));
     let buf_to_write = std::fs::read("Cargo.toml")?;
     hdfs_file_to_write.write(&buf_to_write)?;
     hdfs_file_to_write.close()?;
 
-    // (2) Open for reading // TODO the size doesn't match 
+    // (3) Open for reading 
     let hdfs_file_for_reading = fs.open(&path)?;
-    let available = hdfs_file_for_reading.available()?;
-    println!("avaialble: {}", available);
+    // TODO the size doesn't match 
+    let _available = hdfs_file_for_reading.available()?;
     
-    // (3) List the directory
+    // (4) List the directory
     if let Ok(statuses) = fs.list_status(parent_path) {
-        for status in statuses {
-            println!("status: {:?}, {}", status.name(), status.last_modified());
-        }
+        assert_eq!(statuses.len(), 1);
+        let status = &statuses[0];
+        assert_eq!(status.name(), path);
     }
 
-    // (4) Delete the file
+    // (5) Delete the file
     let _r = fs.delete(&path, false)?;
     assert!(_r);
 
