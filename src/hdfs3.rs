@@ -181,6 +181,21 @@ impl HdfsFs {
         self.new_hdfs_file(path, file)
     }
 
+    pub fn open_for_writing(&self, path: &str) -> Result<HdfsFile, HdfsErr> {
+        let file = unsafe {
+            let cstr_path = CString::new(path).unwrap();
+            hdfsOpenFile(
+                self.raw,
+                cstr_path.as_ptr(),
+                O_WRONLY,
+		0,
+                0,
+                0,
+            )
+        };
+        self.new_hdfs_file(path, file)
+    }
+    
     fn new_hdfs_file(&self, path: &str, file: hdfsFile) -> Result<HdfsFile, HdfsErr> {
         if file.is_null() {
             Err(HdfsErr::Miscellaneous(format!(
@@ -385,13 +400,26 @@ impl HdfsFile {
         &self.path
     }
 
-    pub fn available(&self) -> Result<bool, HdfsErr> {
+    ///  Number of bytes that can be read from this file without blocking.
+    pub fn available(&self) -> Result<i32, HdfsErr> {
         let ret = unsafe { hdfsAvailable(self.fs.raw, self.file) };
-        if ret == 0 {
+        if ret < 0 {
+            Err(HdfsErr::Miscellaneous(format!(
+                "Could not determine HDFS availability for {}",
+                self.path
+            )))
+        } else {
+            Ok(ret)	    
+        }
+    }
+
+    /// Close the opened file
+    pub fn close(&self) -> Result<bool, HdfsErr> {
+        if unsafe { hdfsCloseFile(self.fs.raw, self.file) } == 0 {
             Ok(true)
         } else {
             Err(HdfsErr::Miscellaneous(format!(
-                "Could not determine HDFS availability for {}",
+                "Could not close {}",
                 self.path
             )))
         }
@@ -422,28 +450,23 @@ impl HdfsFile {
         }
     }
 
-    // TODO
-    // This is currently not implemented in `hdfspp`
-    pub fn write(&self, _buf: &[u8]) -> Result<i32, HdfsErr> {
-        /*
-           let written_len = unsafe {
-               hdfsWrite(
-                   self.fs.raw,
-                   self.file,
-                   buf.as_ptr() as *mut c_void,
-                   buf.len() as tSize,
-               )
-           };
-           if written_len > 0 {
-               Ok(written_len)
-           } else {
-               Err(HdfsErr::Miscellaneous(format!(
-                   "Failed to write to {}",
-                   self.path
-               )))
-           }
-        */
-        unimplemented!()
+    pub fn write(&self, buf: &[u8]) -> Result<i32, HdfsErr> {
+        let written_len = unsafe {
+            hdfsWrite(
+                self.fs.raw,
+                self.file,
+                buf.as_ptr() as *mut c_void,
+                buf.len() as tSize,
+            )
+        };
+        if written_len > 0 {
+            Ok(written_len)
+        } else {
+            Err(HdfsErr::Miscellaneous(format!(
+                "Failed to write to {}",
+                self.path
+            )))
+        }
     }
 }
 
