@@ -52,7 +52,7 @@ impl HdfsFs {
     pub fn new(namenode_url: &str) -> Result<HdfsFs, HdfsErr> {
         HdfsFs::new_with_hdfs_params(namenode_url, HashMap::new())
     }
-    
+
     /// Create an instance of HdfsFs. A global cache is used to ensure that only one instance
     /// is created per namenode uri.
     ///
@@ -505,6 +505,11 @@ impl HdfsFile {
                 self.path
             )))
         }
+    }
+
+    /// Seek to given offset in file.
+    pub fn seek(&self, offset: u64) -> bool {
+        (unsafe { hdfsSeek(self.fs.raw, self.file, offset as tOffset) }) == 0
     }
 
     pub fn write(&self, buf: &[u8]) -> Result<i32, HdfsErr> {
