@@ -36,7 +36,8 @@ fn build_hdfs3_lib() {
 
     let dst = cmake::build("libhdfs3");
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
-    println!("cargo:rustc-link-lib=static=hdfs3");
+    println!("cargo:rustc-link-lib=hdfs3");
+    // println!("cargo:rustc-link-lib=static=hdfs3");
     // The following are required when linking statically with libhdfs3
     println!("cargo:rustc-link-lib=dylib=stdc++");
     println!("cargo:rustc-link-lib=dylib=protobuf");
