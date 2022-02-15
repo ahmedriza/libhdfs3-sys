@@ -1,4 +1,4 @@
-use libhdfs3_sys::hdfs3::HdfsFs;
+use libhdfs3_sys::hdfs3::{HdfsFs, ConnectionProperties};
 
 /// An integration test of the API.
 ///
@@ -10,7 +10,14 @@ use libhdfs3_sys::hdfs3::HdfsFs;
 ///
 #[test]
 fn test_all() -> anyhow::Result<()> {
-    let fs = HdfsFs::new("hdfs://localhost:8020")?;
+    let connection_properties = ConnectionProperties {
+        namenode_host: "localhost".to_string(),
+        namenode_port: 8020,
+        namenode_user: None,
+        kerberos_ticket_cache_path: None,
+    };
+    
+    let fs = HdfsFs::new(connection_properties)?;
 
     let parent_path = "/test";
     let path = format!("{}/Cargo.toml", parent_path);

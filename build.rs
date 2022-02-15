@@ -32,6 +32,7 @@ fn get_hdfs3_source_dir() -> &'static str {
     "libhdfs3"
 }
 
+#[allow(unused)]
 // This is the FFI builder for the Apache Hawq hdfs3 C++ library with its C bindings
 fn build_hdfs3_ffi() {
     // Tell cargo to invalidate the built crate whenever the wrapper changes.

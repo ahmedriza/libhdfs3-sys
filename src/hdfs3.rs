@@ -8,7 +8,6 @@ use libc::{c_int, c_short, c_void};
 use log::*;
 use std::sync::RwLock;
 use std::{ffi::CString, marker::PhantomData};
-use url::Url;
 
 use crate::err::HdfsErr;
 use crate::*;
@@ -17,12 +16,22 @@ const O_RDONLY: c_int = 0;
 const O_WRONLY: c_int = 1;
 const O_APPEND: c_int = 1024;
 
+/// Encapsulate Namenode connection properties
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ConnectionProperties {
+    pub namenode_host: String,
+    pub namenode_port: u16,
+    pub namenode_user: Option<String>,
+    pub kerberos_ticket_cache_path: Option<String>,
+}
+
 /// since HDFS client handles are completely thread safe, here we implement Send + Sync trait
 /// for HdfsFs
 unsafe impl Send for HdfsFs {}
 unsafe impl Sync for HdfsFs {}
 lazy_static! {
-    static ref HDFS_CACHE: RwLock<HashMap<NameNodeAddress, HdfsFs>> = RwLock::new(HashMap::new());
+    static ref HDFS_CACHE: RwLock<HashMap<ConnectionProperties, HdfsFs>> =
+        RwLock::new(HashMap::new());
 }
 
 /// Hdfs Filesystem
@@ -30,7 +39,7 @@ lazy_static! {
 /// It is basically thread safe because the native API for hdfsFs is thread-safe.
 #[derive(Clone)]
 pub struct HdfsFs {
-    namenode_address: NameNodeAddress,
+    connection_properties: ConnectionProperties,
     raw: hdfsFS,
     _marker: PhantomData<()>,
 }
@@ -38,7 +47,7 @@ pub struct HdfsFs {
 impl std::fmt::Debug for HdfsFs {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HdfsFs")
-            .field("url", &self.namenode_address)
+            .field("url", &self.connection_properties)
             .finish()
     }
 }
@@ -49,8 +58,8 @@ impl HdfsFs {
     ///
     /// * namenode_url - namenode url, e.g. hdfs://foo:8020. If the port is not specified, then
     ///                  the default port of 8020 will be used to connect to the Namenode.
-    pub fn new(namenode_url: &str) -> Result<HdfsFs, HdfsErr> {
-        HdfsFs::new_with_hdfs_params(namenode_url, HashMap::new())
+    pub fn new(connection_properties: ConnectionProperties) -> Result<HdfsFs, HdfsErr> {
+        HdfsFs::new_with_hdfs_params(connection_properties, HashMap::new())
     }
 
     /// Create an instance of HdfsFs. A global cache is used to ensure that only one instance
@@ -62,17 +71,15 @@ impl HdfsFs {
     ///   the HDFS client side.
     ///   Example: key = 'dfs.domain.socket.path', value = '/var/lib/hadoop-fs/dn_socket'
     pub fn new_with_hdfs_params(
-        namenode_url: &str,
+        connection_properties: ConnectionProperties,
         hdfs_params: HashMap<String, String>,
     ) -> Result<HdfsFs, HdfsErr> {
-        let namenode_address = get_namenode_uri(namenode_url)?;
-
         // Try to get from cache if an entry exists.
         {
             let cache = HDFS_CACHE
                 .read()
                 .expect("Could not aquire read lock on HDFS cache");
-            if let Some(hdfs_fs) = cache.get(&namenode_address) {
+            if let Some(hdfs_fs) = cache.get(&connection_properties) {
                 return Ok(hdfs_fs.clone());
             }
         }
@@ -80,15 +87,17 @@ impl HdfsFs {
         let mut cache = HDFS_CACHE
             .write()
             .expect("Could not aquire write lock on HDFS cache");
-        let hdfsFs = cache.entry(namenode_address.clone()).or_insert_with(|| {
-            let hdfs_fs = create_hdfs_fs(namenode_address.clone(), hdfs_params)
-                .expect("Could not create HDFS connection");
-            HdfsFs {
-                namenode_address,
-                raw: hdfs_fs,
-                _marker: PhantomData,
-            }
-        });
+        let hdfsFs = cache
+            .entry(connection_properties.clone())
+            .or_insert_with(|| {
+                let hdfs_fs = create_hdfs_fs(connection_properties.clone(), hdfs_params)
+                    .expect("Could not create HDFS connection");
+                HdfsFs {
+                    connection_properties,
+                    raw: hdfs_fs,
+                    _marker: PhantomData,
+                }
+            });
 
         Ok(hdfsFs.clone())
     }
@@ -440,7 +449,7 @@ pub struct HdfsFile {
 impl std::fmt::Debug for HdfsFile {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HdfsFile")
-            .field("namenode_address", &self.fs.namenode_address)
+            .field("connection_properties", &self.fs.connection_properties)
             .field("path", &self.path)
             .finish()
     }
@@ -534,37 +543,41 @@ impl HdfsFile {
 
 // -------------------------------------------------------------------------------------------------
 
-/// Encapsulate Namenode address
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NameNodeAddress {
-    host: String,
-    port: u16,
-}
-
 /// Create an instance of hdfsFs.
 ///
 /// * namenode_address - Namenode URL
 /// * hdfs_params - optional key value pairs that need to be passed to configure
 ///   the HDFS client side
 fn create_hdfs_fs(
-    namenode_address: NameNodeAddress,
+    connection_properties: ConnectionProperties,
     hdfs_params: HashMap<String, String>,
 ) -> Result<hdfsFS, HdfsErr> {
     let hdfs_fs = unsafe {
         let hdfs_builder = hdfsNewBuilder();
 
-        let cstr_host = CString::new(namenode_address.host.as_bytes()).unwrap();
+        let cstr_host = CString::new(connection_properties.namenode_host.as_bytes()).unwrap();
         for (k, v) in hdfs_params {
             let cstr_k = CString::new(k).unwrap();
             let cstr_v = CString::new(v).unwrap();
             hdfsBuilderConfSetStr(hdfs_builder, cstr_k.as_ptr(), cstr_v.as_ptr());
         }
         hdfsBuilderSetNameNode(hdfs_builder, cstr_host.as_ptr());
-        hdfsBuilderSetNameNodePort(hdfs_builder, namenode_address.port);
+        hdfsBuilderSetNameNodePort(hdfs_builder, connection_properties.namenode_port);
+        
+        if let Some(user) = connection_properties.namenode_user {
+            let cstr_user = CString::new(user.as_bytes()).unwrap();
+            hdfsBuilderSetUserName(hdfs_builder, cstr_user.as_ptr());
+        }
+        
+        if let Some(kerb_ticket_cache_path) = connection_properties.kerberos_ticket_cache_path {
+            let cstr_kerb_ticket_cache_path =
+                CString::new(kerb_ticket_cache_path.as_bytes()).unwrap();
+            hdfsBuilderSetKerbTicketCachePath(hdfs_builder, cstr_kerb_ticket_cache_path.as_ptr());
+        }
 
         info!(
             "Connecting to Namenode, host: {}, port: {}",
-            namenode_address.host, namenode_address.port
+            connection_properties.namenode_host, connection_properties.namenode_port
         );
 
         hdfsBuilderConnect(hdfs_builder)
@@ -573,38 +586,13 @@ fn create_hdfs_fs(
     if hdfs_fs.is_null() {
         Err(HdfsErr::CannotConnectToNameNode(format!(
             "{}:{}",
-            namenode_address.host, namenode_address.port
+            connection_properties.namenode_host, connection_properties.namenode_port
         )))
     } else {
         Ok(hdfs_fs)
     }
 }
 
-pub const HDFS_FS_SCHEME: &str = "hdfs";
 
-#[inline]
-fn get_namenode_uri(namenode_url: &str) -> Result<NameNodeAddress, HdfsErr> {
-    match Url::parse(namenode_url) {
-        Ok(url) => match url.scheme() {
-            HDFS_FS_SCHEME => {
-                if let Some(host) = url.host() {
-                    let mut namenode_address = NameNodeAddress {
-                        host: host.to_string(),
-                        port: 8020, // default Namenode port
-                    };
-                    // namenode_address.host =
-                    if let Some(port) = url.port() {
-                        namenode_address.port = port;
-                    }
-                    Ok(namenode_address)
-                } else {
-                    Err(HdfsErr::InvalidUrl(namenode_url.to_string()))
-                }
-            }
-            _ => Err(HdfsErr::InvalidUrl(namenode_url.to_string())),
-        },
-        Err(_) => Err(HdfsErr::InvalidUrl(namenode_url.to_string())),
-    }
-}
 
-// -------------------------------------------------------------------------------------------------
+
