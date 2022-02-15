@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 fn main() {
     build_hdfs3_lib();
-    build_hdfs3_ffi();
+    // build_hdfs3_ffi();
 }
 
 // This is the FFI builder for the Apache Hawq hdfs3 C++ library with its C bindings
