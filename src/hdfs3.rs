@@ -29,6 +29,7 @@ pub struct ConnectionProperties {
 /// for HdfsFs
 unsafe impl Send for HdfsFs {}
 unsafe impl Sync for HdfsFs {}
+
 lazy_static! {
     static ref HDFS_CACHE: RwLock<HashMap<ConnectionProperties, HdfsFs>> =
         RwLock::new(HashMap::new());
@@ -56,8 +57,7 @@ impl HdfsFs {
     /// Create an instance of HdfsFs. A global cache is used to ensure that only one instance
     /// is created per namenode uri.
     ///
-    /// * namenode_url - namenode url, e.g. hdfs://foo:8020. If the port is not specified, then
-    ///                  the default port of 8020 will be used to connect to the Namenode.
+    /// * connection_properties - Namenode connection parameters
     pub fn new(connection_properties: ConnectionProperties) -> Result<HdfsFs, HdfsErr> {
         HdfsFs::new_with_hdfs_params(connection_properties, HashMap::new())
     }
@@ -65,8 +65,7 @@ impl HdfsFs {
     /// Create an instance of HdfsFs. A global cache is used to ensure that only one instance
     /// is created per namenode uri.
     ///
-    /// * namenode_url - namenode url, e.g. hdfs://foo:8020. If the port is not specified, then
-    ///                  the default port of 8020 will be used to connect to the Namenode.
+    /// * connection_properties - Namenode connection parameters
     /// * hdfs_params - optional key value pairs that need to be passed to configure
     ///   the HDFS client side.
     ///   Example: key = 'dfs.domain.socket.path', value = '/var/lib/hadoop-fs/dn_socket'
@@ -545,7 +544,7 @@ impl HdfsFile {
 
 /// Create an instance of hdfsFs.
 ///
-/// * namenode_address - Namenode URL
+/// * connection_properties - Namenode connection parameters
 /// * hdfs_params - optional key value pairs that need to be passed to configure
 ///   the HDFS client side
 fn create_hdfs_fs(
