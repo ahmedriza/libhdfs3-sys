@@ -562,21 +562,26 @@ fn create_hdfs_fs(
         }
         hdfsBuilderSetNameNode(hdfs_builder, cstr_host.as_ptr());
         hdfsBuilderSetNameNodePort(hdfs_builder, connection_properties.namenode_port);
-        
-        if let Some(user) = connection_properties.namenode_user {
+
+        if let Some(user) = connection_properties.namenode_user.clone() {
             let cstr_user = CString::new(user.as_bytes()).unwrap();
             hdfsBuilderSetUserName(hdfs_builder, cstr_user.as_ptr());
         }
-        
-        if let Some(kerb_ticket_cache_path) = connection_properties.kerberos_ticket_cache_path {
+
+        if let Some(kerb_ticket_cache_path) =
+            connection_properties.kerberos_ticket_cache_path.clone()
+        {
             let cstr_kerb_ticket_cache_path =
                 CString::new(kerb_ticket_cache_path.as_bytes()).unwrap();
             hdfsBuilderSetKerbTicketCachePath(hdfs_builder, cstr_kerb_ticket_cache_path.as_ptr());
         }
 
         info!(
-            "Connecting to Namenode, host: {}, port: {}",
-            connection_properties.namenode_host, connection_properties.namenode_port
+            "Connecting to Namenode, host: {}, port: {}, user: {:?}, krb_ticket_cache: {:?}",
+            connection_properties.namenode_host,
+            connection_properties.namenode_port,
+            connection_properties.namenode_user,
+            connection_properties.kerberos_ticket_cache_path
         );
 
         hdfsBuilderConnect(hdfs_builder)
@@ -591,7 +596,3 @@ fn create_hdfs_fs(
         Ok(hdfs_fs)
     }
 }
-
-
-
-
