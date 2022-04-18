@@ -19,3 +19,4 @@ GTAGS
 .cache
 cc_examples/bin
 target
+**/build
