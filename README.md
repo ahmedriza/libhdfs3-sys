@@ -26,6 +26,22 @@ the build here since the C++ tests are not really part of the Rust binding and w
 * gtest 
 * gmock
 
+Note that the install section of src/CMakeLists.txt was modified, as follows:
+
+```
+INSTALL(TARGETS libhdfs3-static libhdfs3-shared
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+INSTALL(FILES ${HEADER} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hdfs)
+INSTALL(FILES libhdfs3.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+```
+
+The original source had hard-coded paths such as `lib` and `include`.  This causes problems on systems such 
+as Fedora/CentOS/RHEL and others where 64-bit libraries should go in `/usr/lib64` rather than `/usr/lib`. 
+Using the `GNUInstallDirs` varialbes `CMAKE_INSTALL_LIBDIR` and `CMAKE_INSTALL_INCLUDEDIR` allows the correct
+location to be used or overridden by the use when invoking `cmake`. 
+
 # Note:
 The `libhdfs3.tar.gz` is a tar gzipped file of the contents of the `libhdfs3` source directory.  This can be used
 for generarting RPM builds.
