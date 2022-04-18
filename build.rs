@@ -2,7 +2,14 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    // Build the native C/C++ libraries
+    //
+    // Will not be needed if we use system installed versions of libhdfs3. Using pre-installed
+    // system version of the libhdfs3 will also save on compile time dependencies of Rust projects
+    // as well as significant compilation time.
+    // 
     build_hdfs3_lib();
+    // Generate the Rust wrapper bindings
     // build_hdfs3_ffi();
 }
 

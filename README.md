@@ -14,15 +14,18 @@ The Rust binding is inspired by https://github.com/yahoNanJing/fs-hdfs
 
 The main requirements are the dependencies needed by libhdfs3.
 * cmake                           http://www.cmake.org/
-* boost (tested on 1.53+)         http://www.boost.org/
 * google protobuf                 http://code.google.com/p/protobuf/
 * libxml2                         http://www.xmlsoft.org/
 * kerberos                        http://web.mit.edu/kerberos/
 * libuuid                         http://sourceforge.net/projects/libuuid/
 * libgsasl                        http://www.gnu.org/software/gsasl/
 
-In addition compiling the C++ test code requires the Google Test frameworks (might remove these dependencies from 
+In addition compiling the C++ test code may require the Google Test frameworks (might remove these dependencies from 
 the build here since the C++ tests are not really part of the Rust binding and will simplify the dependencies required).
 
 * gtest 
 * gmock
+
+# Note:
+The `libhdfs3.tar.gz` is a tar gzipped file of the contents of the `libhdfs3` source directory.  This can be used
+for generarting RPM builds.
