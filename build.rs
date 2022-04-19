@@ -9,31 +9,26 @@ fn main() {
 }
 
 fn build_hdfs3_lib() {
-    println!(
-        "cargo:rerun-if-changed={}",
-        get_hdfs3_file_path("src/client/hdfs.h")
-    );
-
     // Build the native C/C++ libraries
-    //
     // Will not be needed if we use system installed versions of libhdfs3. Using pre-installed
     // system version of the libhdfs3 will also save on compile time dependencies of Rust projects
     // as well as significant compilation time.
+    //
+    // Uncomment the following 4 lines for static linking
+    //
+    // println!("cargo:rerun-if-changed={}", get_hdfs3_file_path("src/client/hdfs.h"));
     // let dst = cmake::build("libhdfs3");
     // println!("cargo:rustc-link-search=native={}/lib", dst.display());
-
-    // statically link 
     // println!("cargo:rustc-link-lib=static=hdfs3");
+    // println!("cargo:rustc-link-lib=dylib=stdc++");
+    // println!("cargo:rustc-link-lib=dylib=protobuf");
+    // println!("cargo:rustc-link-lib=dylib=gsasl");
+    // println!("cargo:rustc-link-lib=dylib=uuid");
+    // println!("cargo:rustc-link-lib=dylib=xml2");
+    // println!("cargo:rustc-link-lib=dylib=krb5");
 
+    // Comment out this, if statically linking
     println!("cargo:rustc-link-lib=dylib=hdfs3");
-
-    // The following are required when linking statically with libhdfs3
-    println!("cargo:rustc-link-lib=dylib=stdc++");
-    println!("cargo:rustc-link-lib=dylib=protobuf");
-    println!("cargo:rustc-link-lib=dylib=gsasl");
-    println!("cargo:rustc-link-lib=dylib=uuid");
-    println!("cargo:rustc-link-lib=dylib=xml2");
-    println!("cargo:rustc-link-lib=dylib=krb5");
 }
 
 fn get_hdfs3_file_path(filename: &'static str) -> String {
