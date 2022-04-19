@@ -8,7 +8,8 @@ fn main() {
     // system version of the libhdfs3 will also save on compile time dependencies of Rust projects
     // as well as significant compilation time.
     // 
-    build_hdfs3_lib();
+    // build_hdfs3_lib();
+    //
     // Generate the Rust wrapper bindings
     // build_hdfs3_ffi();
 }
