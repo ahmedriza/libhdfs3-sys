@@ -80,6 +80,8 @@ void Logger::printf(LogSeverity s, const char * fmt, ...) {
     try {
         call_once(Once, InitProcessId);
         std::vector<char> buffer;
+        // Provide some space in the buffer, as dereferencing an empty buffer is UB
+        buffer.resize(1);
         struct tm tm_time;
         struct timeval tval;
         memset(&tval, 0, sizeof(tval));

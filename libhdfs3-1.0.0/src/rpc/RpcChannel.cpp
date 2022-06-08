@@ -765,8 +765,14 @@ void RpcChannelImpl::readOneResponse(bool writeLock) {
      * read response header
      */
     headerSize = in->readVarint32(readTimeout);
-    buffer.resize(headerSize);
-    in->readFully(&buffer[0], headerSize, readTimeout);
+    if (headerSize > 0) {
+        buffer.resize(headerSize);
+        in->readFully(&buffer[0], headerSize, readTimeout);
+    } else {
+        THROW(HdfsRpcException,
+              "Got headerSize of \"%d\" which is invalid.",
+              headerSize)
+    }
 
     if (!curRespHeader.ParseFromArray(&buffer[0], headerSize)) {
         THROW(HdfsRpcException,
@@ -791,9 +797,8 @@ void RpcChannelImpl::readOneResponse(bool writeLock) {
         }
 
         bodySize = in->readVarint32(readTimeout);
-        buffer.resize(bodySize);
-
         if (bodySize > 0) {
+            buffer.resize(bodySize);
             in->readFully(&buffer[0], bodySize, readTimeout);
         }
 
