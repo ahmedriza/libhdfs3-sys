@@ -5,10 +5,15 @@
 // Compile with:
 // g++ -D _GLIBCXX_ASSERTIONS t.cpp
 //
-// The `_GLIBCXX_ASSERTIONS` is turned on by default in Fedora hardened RPM builds
+// The `_GLIBCXX_ASSERTIONS` is turned on by default in Fedora RPM builds
+//
+// This can be turned off by adding the following to the RPM spec file:
+//
+// %undefine _auto_set_build_flags
 //
 // libhdfs3 code has a few places where an empty std::vector is dereferenced causing
-// this to fail at runtime.  They have been corrected in the code in this repository
+// this to fail at runtime.  They have been corrected in some of the code in this repository
+// (but not all).
 
 #include <vector>
 #include <iostream>
